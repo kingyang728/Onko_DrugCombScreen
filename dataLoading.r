@@ -197,7 +197,7 @@ Drug_predict<- function(Mutation_DF,Drug_DB,patient_cancerType){
   #Tumor_Solid_Status <- T
   Drug_DF$level <- ""
   
-  ### set drug level based on the patint cancertype.
+  ### set drug level based on the patint cancertype. Cancer type like any patient cancer type with general cancer and Unspecified Cancer can be set as A
   if(grepl(patient_cancerType, "Lymphoma",ignore.case = T)){
     if(length(Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$level)!=0) {
       Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$level <- paste0("A",Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$DBlevel)
@@ -206,19 +206,19 @@ Drug_predict<- function(Mutation_DF,Drug_DB,patient_cancerType){
       Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T) ) , ]$level <- paste0("B",Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T) ), ]$DBlevel)
     }
   } else if(grepl(patient_cancerType, "Leukemias|Blood",ignore.case = T)){
-    if(length(Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("all tumor|^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T), ]$level)!=0) {
-      Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("all tumor|^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T), ]$level <- paste0("A",Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("all tumor|^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T), ]$DBlevel)
+    if(length(Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$level)!=0) {
+      Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$level <- paste0("A",Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$DBlevel)
     }
-    if(length(Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("all tumor|^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T)), ]$level)!=0){
-      Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("all tumor|^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T)), ]$level <- paste0("B",Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("all tumor|^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T)), ]$DBlevel)
+    if(length(Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)), ]$level)!=0){
+      Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)), ]$level <- paste0("B",Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)), ]$DBlevel)
     }
     
   } else {
-    if(length(Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("solid|^all |^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T), ]$level)!=0){
-      Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("solid|^all |^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T), ]$level <- paste0("A",Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("solid|^all |^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T), ]$DBlevel)
+    if(length(Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("Unspecified Cancer|General Cancer",Drug_DF$Cancer,ignore.case = T), ]$level)!=0){
+      Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("Unspecified Cancer|General Cancer",Drug_DF$Cancer,ignore.case = T), ]$level <- paste0("A",Drug_DF[grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("Unspecified Cancer|General Cancer",Drug_DF$Cancer,ignore.case = T), ]$DBlevel)
     }
-    if(length(Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("solid|^all |^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T)), ]$level)!=0){
-      Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("solid|^all |^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T)), ]$level <- paste0("B",Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("solid|^all |^cancer$|unspecified",Drug_DF$Cancer,ignore.case = T)), ]$DBlevel)
+    if(length(Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("Unspecified Cancer|General Cancer",Drug_DF$Cancer,ignore.case = T)), ]$level)!=0){
+      Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("Unspecified Cancer|General Cancer",Drug_DF$Cancer,ignore.case = T)), ]$level <- paste0("B",Drug_DF[!(grepl(patient_cancerType, Drug_DF$Cancer,ignore.case = T)|grepl("Unspecified Cancer|General Cancer",Drug_DF$Cancer,ignore.case = T)), ]$DBlevel)
     }
     
   }
@@ -240,8 +240,6 @@ Drug_predict<- function(Mutation_DF,Drug_DB,patient_cancerType){
   Drug_DF<- unique(Drug_DF)
   Drug_DF
   
-  # Drug_DF[Drug_DF$DBlevel==4, ]$level <-Drug_DF[Drug_DF$DBlevel==4, ]$DBlevel
-  #test <- Drug_DF[grep(patient_cancerType, Drug_DF$Cancer,ignore.case = T), ]$DBlevel
 }
 
 FilterDrug_DF <- function(Drug_DF){
@@ -275,10 +273,89 @@ FilterDrug_DF <- function(Drug_DF){
   Filtered_DrugDF
 }
 
+
 Get_MTBreporter_DF <- function(Drug_DB,patient_cancerType,Mutation_DF,Filter_status){
   # Mutation_DF <- Read_CSV_reform(inp_file,inp_type)
   Drug_DF <- Drug_predict(Mutation_DF,Drug_DB,patient_cancerType)
   Drug_DF <- Drug_DF %>% dplyr::rename(Pat.Var = "Pat Var", Known.Var = "Known Var")
+  Drug_DF <- Drug_DF %>%
+    # |         Pat.Var        |  PatVar.INTPN    |
+    # |:----------------------:|:----------------:|
+    # |      In_Frame_Ins      | ins(exact match) |
+    # |      In_Frame_Del      | del(exact match) |
+    # |     Frame_Shift_Ins    |       loss       |
+    # |     Frame_Shift_Del    |       loss       |
+    # |       Splice_site      |       loss       |
+    # |      amplification     |       gain       |
+    # |        deletion        |       loss       |
+    # |    Missense_Mutation   |     mutation     |
+    # |    Nonsense_Mutation   |       loss       |
+    # |    Nonstop_Mutation    |    exact match   |
+    # | Translation_Start_Site |    exact match   |
+  dplyr::mutate(PatVar.INTPN = case_when(
+      grepl("In_Frame_Ins", Variant_Classification, ignore.case = TRUE) ~ "ins",
+      grepl("In_Frame_Del", Variant_Classification, ignore.case = TRUE) ~ "del",
+      grepl("Frame_Shift_Ins|Frame_Shift_Del|Splice_site|Nonsense_Mutation|deletion", Variant_Classification, ignore.case = TRUE) ~ "loss",
+      grepl("amplification", Variant_Classification, ignore.case = TRUE) ~ "gain",
+      grepl("Missense_Mutation", Variant_Classification, ignore.case = TRUE) ~ "mutation",
+      grepl("Nonstop_Mutation|Translation_Start_Site", Variant_Classification, ignore.case = TRUE) ~ "exact match",
+      TRUE ~ as.character("NA") # default case to NA
+    )) %>% 
+    # |         Known.Var         |   knownVar.INTPN       |
+    # |:-------------------------:|:----------------------:|
+    # |          “(GoF)”          |          gain          |
+    # |          “(LoF)”          |          loss          |
+    # |          “splice”         |          loss          |
+    # |          “delins”         |          loss          |
+    # |           “ins”           |           ins          |
+    # |           “del”           |           del          |
+    # |          “indel”          |          loss          |
+    # |            “fs”           |          loss          |
+    # |         “deletion”        |          loss          |
+    # |      “amplification”      |          gain          |
+    # |          “dup”            |          gain          |
+    # |            mut            |        mutation        |
+    # |            any            |        mutation        |
+    # |   loss/loss-of-function   |          loss          |
+    # |         “mutation”        |        mutation        |
+    # |       “^expression”       |          gain          |
+    # |      “Overexpression”     |          gain          |
+    # |     “Underexpression”     |          loss          |
+    # |    Truncating Mutations   |          loss          |
+    # |    Oncogenic Mutations    |        mutation        |
+    # |        “FRAMESHIFT”       |          loss          |
+    # |       “FRAME SHIFT”       |          loss          |
+    # |     Exon 17 mutations     | mutation (exact match) |
+    # |      Exon 19 Deletion     |   loss  (exact match)  |
+    # | EXON 14 SKIPPING MUTATION | mutation (exact match) |
+    # |  ^[A-Z][0-9]+[A-Z]        | mutation (exact match) |
+    # |         "wild"            |         wildtype       |
+    # | "[A-Za-z0-9_]+-[A-Za-z0-9_]|fusion|rearrangement" | fusion |
+  dplyr::mutate(knownVar.INTPN = case_when(
+      grepl("\\(GoF\\)", Known.Var, ignore.case = TRUE) ~ "gain",
+      grepl("\\(LoF\\)", Known.Var, ignore.case = TRUE) ~ "loss",
+      grepl("splice|delins|indel|fs|deletion|Underexpression|FRAMESHIFT|FRAME SHIFT|Truncating Mutations|loss|loss-of-function|VIII|LOH|Methylation|Biallelic Inactivation", Known.Var, ignore.case = TRUE) ~ "loss",
+      grepl("amplification|expression|Overexpression|dup|PHOSPHORYLATION", Known.Var, ignore.case = TRUE) ~ "gain",
+      grepl("([a-zA-Z0-9_]+ins[a-zA-Z0-9]*)|insertion|ITD", Known.Var, perl = TRUE, ignore.case = TRUE)  ~ "ins",
+      grepl("([a-zA-Z0-9_]+del[a-zA-Z0-9]*)", Known.Var, perl = TRUE, ignore.case = TRUE) ~ "del",
+      Known.Var %in% c("Exon 17 mutations", "EXON 14 SKIPPING MUTATION") ~ "exact match",
+      Known.Var == "Exon 19 Deletion" ~ "exact match",
+      grepl("[A-Z][0-9]+\\*", Known.Var, ignore.case = TRUE) ~ "loss",  ## capture the stop codon
+      grepl("^[A-Z][0-9]+[A-Z]*", Known.Var, ignore.case = TRUE) ~ "mutation",
+      grepl("mut|any|mutation|Oncogenic Mutations|ALTERATION", Known.Var, ignore.case = TRUE) ~ "mutation",
+      grepl("wild", Known.Var, ignore.case = TRUE) ~ "wildtype",
+      grepl("[A-Za-z0-9_]+-[A-Za-z0-9_]|fusion|rearrangement", Known.Var, ignore.case = TRUE) ~ "fusion",
+      TRUE ~ as.character("mutation") # default case to NA
+    )) %>% 
+    dplyr::filter(knownVar.INTPN != "fusion" & knownVar.INTPN != "wildtype") %>%  
+    dplyr::filter(
+      (PatVar.INTPN == "gain" & knownVar.INTPN == "gain") | 
+        (PatVar.INTPN == "loss" & knownVar.INTPN == "loss") | 
+        (PatVar.INTPN == "ins" & knownVar.INTPN == "ins") | 
+        (PatVar.INTPN == "del" & knownVar.INTPN == "del") |
+        (knownVar.INTPN %in% c("mutation", "exact match"))
+    )
+  
   Drug_DF$Match_Sign <-"NONE"
   if(dim(Drug_DF[mapply(grepl, gsub("\\*", "\\\\*", Drug_DF$Pat.Var), gsub("\\*", "\\\\*", Drug_DF$Known.Var),MoreArgs = list(ignore.case = TRUE)),])[1]!=0){
     Drug_DF[mapply(grepl, gsub("\\*", "\\\\*", Drug_DF$Pat.Var), gsub("\\*", "\\\\*", Drug_DF$Known.Var),MoreArgs = list(ignore.case = TRUE)),]$Match_Sign <- "Exact"}
@@ -287,17 +364,27 @@ Get_MTBreporter_DF <- function(Drug_DB,patient_cancerType,Mutation_DF,Filter_sta
     Drug_DF[mapply(grepl, "any|mut",  Drug_DF$Known.Var,MoreArgs = list(ignore.case = TRUE)),]$Match_Sign <- "AnyMut"}
   Drug_DF <- Drug_DF[order(Drug_DF$Sample_ID),]  
   Drug_DF <-Drug_DF[!(Drug_DF$Drugs == "NA"),]
-  if(missing(Filter_status)){
-    FilteredDrug_DF<-FilterDrug_DF(Drug_DF)
-    return(FilteredDrug_DF)
-  } else if(Filter_status){
-    FilteredDrug_DF<-FilterDrug_DF(Drug_DF)
-    return(FilteredDrug_DF)
-  }else{
-    return(Drug_DF)
-  }
   
+  Drug_DF <- Drug_DF %>% dplyr:: filter(( (knownVar.INTPN == "exact match"|PatVar.INTPN =="exact match") & Match_Sign == "Exact")|
+                                          (PatVar.INTPN == "ins" & knownVar.INTPN == "ins" & Match_Sign == "Exact")|
+                                          (PatVar.INTPN == "del" & knownVar.INTPN == "del" & Match_Sign == "Exact") |
+                                          (PatVar.INTPN == "gain" & knownVar.INTPN == "gain") | 
+                                          (PatVar.INTPN == "loss" & knownVar.INTPN == "loss") | 
+                                           knownVar.INTPN == "mutation"
+  ) %>% dplyr::select((-c(Variant_Classification,PatVar.INTPN, knownVar.INTPN)))
+  return(Drug_DF)
+  # if(missing(Filter_status)){
+  #   FilteredDrug_DF<-FilterDrug_DF(Drug_DF)
+  #   return(FilteredDrug_DF)
+  # } else if(Filter_status){
+  #   FilteredDrug_DF<-FilterDrug_DF(Drug_DF)
+  #   return(FilteredDrug_DF)
+  # }else{
+  #   return(Drug_DF)
+  # }
 }
+
+
 ####
 
 PlotDF_Create <- function(Significant_DurgCombsTB){

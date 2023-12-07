@@ -5,7 +5,7 @@ account: dla7k6-y-jeong
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 10408889
-bundleId: 7902724
+bundleId: 8015500
 url: https://dla7k6-y-jeong.shinyapps.io/Onko_DrugScreen/
 version: 1
 asMultiple: FALSE

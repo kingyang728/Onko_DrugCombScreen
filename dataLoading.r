@@ -2,11 +2,11 @@ suppressPackageStartupMessages(library(maftools, quietly=TRUE, warn.conflicts = 
 suppressPackageStartupMessages(library(VariantAnnotation, quietly=TRUE, warn.conflicts = FALSE))
 suppressPackageStartupMessages(library(GenomicFeatures, quietly=TRUE, warn.conflicts = FALSE))
 # suppressPackageStartupMessages(library(BSgenome.Hsapiens.UCSC.hg19, quietly=TRUE, warn.conflicts = FALSE))
-suppressPackageStartupMessages(library(BSgenome.Hsapiens.UCSC.hg38, quietly=TRUE, warn.conflicts = FALSE))
-Combined_DrugDB_path <- "Data/Combined_DrugDB.csv"
+# suppressPackageStartupMessages(library(BSgenome.Hsapiens.UCSC.hg38, quietly=TRUE, warn.conflicts = FALSE))
+# Combined_DrugDB_path <- "Data/Combined_DrugDB.csv"
 Comb_DrugClassified_DB_path <- "Data/Combined_DrugClassifiedDB.csv"
 
-Combined_DrugDB <- read.csv(Combined_DrugDB_path,row.names = NULL,header = TRUE,check.names = FALSE)
+# Combined_DrugDB <- read.csv(Combined_DrugDB_path,row.names = NULL,header = TRUE,check.names = FALSE)
 DrugClassified_DB <- read.csv(Comb_DrugClassified_DB_path,row.names = NULL,header = TRUE,check.names = FALSE)
 
 # DLBCLc1Significant_DurgCombID_Path <- "Data/DLBCLc1_SignificantDrugCombsIDDF.csv"
@@ -69,9 +69,9 @@ GFFTXDBDataload <- function(gff_File){
 #   #  txdb <- loadDb(txDBPath)
 #   return(txDBPath)
 # }
-gff_File = "Data/Homo_sapiens.GRCh38.110.gff3.gz"
+# gff_File = "Data/Homo_sapiens.GRCh38.110.gff3.gz"
 # txDBPath = "Data/Homo_sapiens.GRCh38.110.gff3_txdb.sqlite"
-txDBPath<-GFFTXDBDataload(gff_File)
+# txDBPath<-GFFTXDBDataload(gff_File)
 
 #############
 VCF_to_SNV <- function(Input_Vcf,txDBPath){
@@ -293,11 +293,11 @@ Get_MTBreporter_DF <- function(Drug_DB,patient_cancerType,Mutation_DF,Filter_sta
     # |    Nonstop_Mutation    |    exact match   |
     # | Translation_Start_Site |    exact match   |
   dplyr::mutate(PatVar.INTPN = case_when(
-      grepl("In_Frame_Ins", Variant_Classification, ignore.case = TRUE) ~ "ins",
-      grepl("In_Frame_Del", Variant_Classification, ignore.case = TRUE) ~ "del",
-      grepl("Frame_Shift_Ins|Frame_Shift_Del|Splice_site|Nonsense_Mutation|deletion", Variant_Classification, ignore.case = TRUE) ~ "loss",
+      grepl("In_Frame_Ins|inframe_ins", Variant_Classification, ignore.case = TRUE) ~ "ins",
+      grepl("In_Frame_Del|inframe_deletion", Variant_Classification, ignore.case = TRUE) ~ "del",
+      grepl("frameshift|Frame_Shift_Ins|Frame_Shift_Del|Splice_site|nonsense|deletion|stop_gain|splice_donor_variant", Variant_Classification, ignore.case = TRUE) ~ "loss",
       grepl("amplification", Variant_Classification, ignore.case = TRUE) ~ "gain",
-      grepl("Missense_Mutation", Variant_Classification, ignore.case = TRUE) ~ "mutation",
+      grepl("Missense|coding_sequence_variant|protein_altering_variant|incomplete_terminal_codon_variant|Start_Codon_SNP", Variant_Classification, ignore.case = TRUE) ~ "mutation",
       grepl("Nonstop_Mutation|Translation_Start_Site", Variant_Classification, ignore.case = TRUE) ~ "exact match",
       TRUE ~ as.character("NA") # default case to NA
     )) %>% 
@@ -384,7 +384,24 @@ Get_MTBreporter_DF <- function(Drug_DB,patient_cancerType,Mutation_DF,Filter_sta
   # }
 }
 
-
+Get_DrugPredictsType_DF <- function(Drugs_DF,PredictType){
+  # PredictsTypeDrug_DF <- NULL
+  if(grepl("Positive|Negative|All",PredictType,ignore.case = T)){
+    if(grepl("Positive",PredictType,ignore.case = T)){
+      PredictsTypeDrug_DF <- Drugs_DF[grepl("^sensitivity$|^response$|^sensitivity/response$",Drugs_DF$Predicts,ignore.case = T),]  ### be careful for the case
+    } else if(grepl("Negative",PredictType,ignore.case = T)){
+      PredictsTypeDrug_DF <- Drugs_DF[grepl("^Adverse Response$|^resistance$|^no response$",Drugs_DF$Predicts,ignore.case = T),]
+    } else if(grepl("All",PredictType,ignore.case = T)){
+      PredictsTypeDrug_DF <- Drugs_DF
+      
+    }
+    
+  } else{
+    print("Wrong predict type input")
+  }
+  return(PredictsTypeDrug_DF)
+  
+}
 ####
 
 PlotDF_Create <- function(Significant_DurgCombsTB){

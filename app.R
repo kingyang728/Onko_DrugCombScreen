@@ -229,9 +229,6 @@ body <- dashboardBody(
   # )
   tabItems(
     tabItem(tabName = "volcanoplot",
-            p(strong("Volcanoplot interactivity:")),
-            p("- Hover over a point to show the Drug-combination candidates information."),
-            p("- Click and drag across the plot to select a specific area for zooming in. After selecting, double-click to enlarge the chosen area. To zoom out, simply double-click again."),
             verbatimTextOutput("click_info",
                                placeholder = TRUE),
             
@@ -336,7 +333,7 @@ body <- dashboardBody(
 # Combine the UI components in dashboardPage
 ui <- dashboardPage(
   dashboardHeader(
-    title = span("Onko-DrugComb analysis"),
+    title = span("Onko_DrugCombScreen"),
     titleWidth =300
   ),
   sidebar,
@@ -510,8 +507,7 @@ server <- function(input, output,session) {
     Data_Input$Cellline_Table <- Get_DrugPredictsType_DF(Data_Input$Cellline_Table, input$Cellline_Response_selector)}
   })
   
-  
-
+  # Render the table for target_primary_data
   output$Primary_Table <- renderDataTable({
     if (is.null(Data_Input$Primary_Table)) return(NULL)
     Data_Input$Primary_Table
@@ -582,7 +578,9 @@ server <- function(input, output,session) {
     }
   })
   
-
+  output$DrugComb_Analysis_Table <- renderDataTable({
+    Data_Input$DrugComb_Analysis_Table
+  },options = list(scrollX = TRUE,pageLength = 3,autoWidth = TRUE))
   
   is_de <- reactive({
     data <-  Data_Input$data_PlotDF
@@ -597,8 +595,6 @@ server <- function(input, output,session) {
       data
     }
   })
-
-  
   # Render the DrugComb_Analysis_Table with significant difference
   output$DrugComb_Analysis_Table <- renderDataTable({
     de_DrugComb_Analysis_Table()
@@ -662,18 +658,15 @@ server <- function(input, output,session) {
     nearPoints(data_w_log_pval(),
                input$volcano_click,
                xvar = "log2oddsRatio",
-               yvar = "log_pval",
+               yvar = .data$log_pval,
                maxpoints = 1) %>%
-      dplyr::select("Drug_comb")
+      select("Drug_comb")
   })
   
   # when a point is clicked on the volcano plot
   # add drug to clicked drug list
   # if the point has been clicked twice, remove from list
-  observeEvent(input$volcano_click, { 
-    if(is.null(Data_Input$DrugComb_Analysis_Table)){
-      drug_list$clicked_drugs_list <- NULL
-    }
+  observeEvent(input$volcano_click, {
     # create variable of what has been clicked + selected
     if (is.null(input$selected_drugs)) {
       drug_list$clicked_drugs_list <- NULL
@@ -774,28 +767,19 @@ server <- function(input, output,session) {
   
   # Create -log10 pvalue column
   data_w_log_pval <- reactive({
-    if(!is.null(Data_Input$data_PlotDF)){
-      data <- Data_Input$data_PlotDF
-      # make new cols and select
-      reduced_data <- data %>%
-        mutate(log_pval = -log10(data[[input$pvalue_col]]))
-      
-    }
-    
+    data <- Data_Input$data_PlotDF
+    # make new cols and select
+    reduced_data <- data %>%
+      mutate(log_pval = -log10(data[[input$pvalue_col]]))
   })
   
   # Collect nearpoint info and reduce to only Drug_comb, log2oddsRatio and pvalue_col
   point_info <- reactive({
-    if(!is.null(data_w_log_pval())){
-      nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = "log2oddsRatio", yvar = "log_pval", maxpoints = 1)
-      nearpoint_out %>%
-        dplyr::select("Drug_comb", "log2oddsRatio", input$pvalue_col)}
+    nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = log2oddsRatio, yvar = .data$log_pval, maxpoints = 1)
+    nearpoint_out %>%
+      select("Drug_comb", "log2oddsRatio", input$pvalue_col)
   })
-  # render printed text
-  output$click_info <- renderPrint({
-    if(!is.null(point_info()))
-      point_info()
-  })
+  
   
   # DOWNLOAD HANDLER ----- VOLCANO
   

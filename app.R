@@ -564,19 +564,32 @@ server <- function(input, output,session) {
     }
   )
   
-  observeEvent(input$submit,  {
-    # Check if any of the tables are NULL
-    if (is.null(Data_Input$Primary_Table) || is.null(Data_Input$Control_Table) ) {
-      Data_Input$DrugComb_Analysis_Table <- NULL  # Ensures the table output is cleared
-    } else if(is.null(Data_Input$Cellline_Table)){
-      Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Primary_Table,Data_Input$Control_Table,Freq_cutoff = Percentage_Cutoff(),testType = Testtype() )
-      Data_Input$CirclePlot_DFList <- CirclePlot_DF_Create(Data_Input$DrugComb_Analysis_Table)
-    } else {
-      Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Primary_Table, Data_Input$Control_Table, Data_Input$Cellline_Table, Freq_cutoff = Percentage_Cutoff(),testType = Testtype() )
-      Data_Input$data_PlotDF <- PlotDF_Create(Data_Input$DrugComb_Analysis_Table)
-      Data_Input$CirclePlot_DFList <- CirclePlot_DF_Create(Data_Input$DrugComb_Analysis_Table)
-    }
+  observeEvent(input$submit, {
+    # Use withProgress to show a progress indicator
+    withProgress(message = 'Processing... Please wait', value = 0, {
+      # Optionally, set an initial progress amount
+      incProgress(0.1)  # Shows initial progress
+      
+      # Check if any of the tables are NULL
+      if (is.null(Data_Input$Primary_Table) || is.null(Data_Input$Control_Table)) {
+        Data_Input$DrugComb_Analysis_Table <- NULL  # Ensures the table output is cleared
+        incProgress(0.9, detail = "Clearing results...")  # Completes the progress
+      } else if(is.null(Data_Input$Cellline_Table)) {
+        Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Primary_Table, Data_Input$Control_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
+        incProgress(0.5, detail = "Processing without cell line data...")  # Adjusts the progress to complete
+        Data_Input$CirclePlot_DFList <- CirclePlot_DF_Create(Data_Input$DrugComb_Analysis_Table)
+        incProgress(0.9, detail = "Processing CirclePlot_DFlist ...")  # Adjusts the progress to complete
+      } else {
+        Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Primary_Table, Data_Input$Control_Table, Data_Input$Cellline_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
+        incProgress(0.4, detail = "Processing with cell line data...")  # Adjusts the progress to complete
+        Data_Input$data_PlotDF <- PlotDF_Create(Data_Input$DrugComb_Analysis_Table)
+        incProgress(0.7, detail = "Processing PlotDF ...")  # Adjusts the progress to complete
+        Data_Input$CirclePlot_DFList <- CirclePlot_DF_Create(Data_Input$DrugComb_Analysis_Table)
+        incProgress(0.9, detail = "Processing CirclePlot_DFList...")  # Adjusts the progress to complete
+      }
+    })
   })
+  
   
   output$DrugComb_Analysis_Table <- renderDataTable({
     Data_Input$DrugComb_Analysis_Table
@@ -655,41 +668,66 @@ server <- function(input, output,session) {
   
   # store clicked drug info
   clicked_drug <- reactive({
-    nearPoints(data_w_log_pval(),
-               input$volcano_click,
-               xvar = "log2oddsRatio",
-               yvar = .data$log_pval,
-               maxpoints = 1) %>%
-      select("Drug_comb")
+    if (is.null(data_w_log_pval())) {
+      return(NULL) # Early exit if data_w_log_pval is NULL
+    } else {
+      nearPoints(data_w_log_pval(),
+                 input$volcano_click,
+                 xvar = "log2oddsRatio",
+                 yvar = "log_pval",
+                 maxpoints = 1) %>%
+        dplyr::select("Drug_comb")
+    }
   })
   
   # when a point is clicked on the volcano plot
   # add drug to clicked drug list
   # if the point has been clicked twice, remove from list
+  # observeEvent(input$volcano_click, {
+  #   # create variable of what has been clicked + selected
+  #   if (is.null(input$selected_drugs)) {
+  #     drug_list$clicked_drugs_list <- NULL
+  #   }
+  #   # if drug_list is empty
+  #   # get point info and save drug
+  #   if (is.null(drug_list$clicked_drugs_list)) {
+  #     drug_list$clicked_drugs_list <- clicked_drug()
+  #     # if drug_list is not NULL
+  #     # check to see if drug is in drugs_list
+  #   } else {
+  #     drug_present <- clicked_drug() %in% input$selected_drugs
+  #     # if TRUE (drug is present already)
+  #     # remove drug from drug list
+  #     if (drug_present) {
+  #       present_idx <- !grepl(clicked_drug(), input$selected_drugs)
+  #       # remove row
+  #       drug_list$clicked_drugs_list <- input$selected_drugs[present_idx]
+  #     } else {
+  #       drug_list$clicked_drugs_list <- c(clicked_drug(), input$selected_drugs)
+  #     }
+  #   }
+  # })
   observeEvent(input$volcano_click, {
-    # create variable of what has been clicked + selected
-    if (is.null(input$selected_drugs)) {
-      drug_list$clicked_drugs_list <- NULL
-    }
-    # if drug_list is empty
-    # get point info and save drug
-    if (is.null(drug_list$clicked_drugs_list)) {
-      drug_list$clicked_drugs_list <- clicked_drug()
-      # if drug_list is not NULL
-      # check to see if drug is in drugs_list
-    } else {
-      drug_present <- clicked_drug() %in% input$selected_drugs
-      # if TRUE (drug is present already)
-      # remove drug from drug list
-      if (drug_present) {
-        present_idx <- !grepl(clicked_drug(), input$selected_drugs)
-        # remove row
-        drug_list$clicked_drugs_list <- input$selected_drugs[present_idx]
+    # Check if data for the plot is available
+    if (!is.null(Data_Input$data_PlotDF)) {
+      # Proceed with the existing logic only if data is available
+      if (is.null(input$selected_drugs)) {
+        drug_list$clicked_drugs_list <- NULL
+      }
+      if (is.null(drug_list$clicked_drugs_list)) {
+        drug_list$clicked_drugs_list <- clicked_drug()
       } else {
-        drug_list$clicked_drugs_list <- c(clicked_drug(), input$selected_drugs)
+        drug_present <- clicked_drug() %in% input$selected_drugs
+        if (drug_present) {
+          present_idx <- !grepl(clicked_drug(), input$selected_drugs)
+          drug_list$clicked_drugs_list <- input$selected_drugs[present_idx]
+        } else {
+          drug_list$clicked_drugs_list <- c(clicked_drug(), input$selected_drugs)
+        }
       }
     }
   })
+  
   
   observe({
     if(is.null(input$shinymanager_where) || (!is.null(input$shinymanager_where) && input$shinymanager_where %in% "application")){
@@ -726,15 +764,28 @@ server <- function(input, output,session) {
   # when there is a double click on the plot
   # if brush is null, nothing happens,
   # if brush is not null, assign values to ranges
+  # observeEvent(input$volcano_dbl_click, {
+  #   brush <- input$volcano_brush
+  #   if (!is.null(brush)) {
+  #     ranges$x <- c(brush$xmin, brush$xmax)
+  #     ranges$y <- c(brush$ymin, brush$ymax)
+  # 
+  #   } else {
+  #     ranges$x <- NULL
+  #     ranges$y <- NULL
+  #   }
+  # })
   observeEvent(input$volcano_dbl_click, {
-    brush <- input$volcano_brush
-    if (!is.null(brush)) {
-      ranges$x <- c(brush$xmin, brush$xmax)
-      ranges$y <- c(brush$ymin, brush$ymax)
-      
-    } else {
-      ranges$x <- NULL
-      ranges$y <- NULL
+    # Check if data for the plot is available
+    if (!is.null(Data_Input$data_PlotDF)) {
+      brush <- input$volcano_brush
+      if (!is.null(brush)) {
+        ranges$x <- c(brush$xmin, brush$xmax)
+        ranges$y <- c(brush$ymin, brush$ymax)
+      } else {
+        ranges$x <- NULL
+        ranges$y <- NULL
+      }
     }
   })
   
@@ -767,19 +818,73 @@ server <- function(input, output,session) {
   
   # Create -log10 pvalue column
   data_w_log_pval <- reactive({
-    data <- Data_Input$data_PlotDF
-    # make new cols and select
-    reduced_data <- data %>%
-      mutate(log_pval = -log10(data[[input$pvalue_col]]))
+    # Check if the data_PlotDF is not NULL
+    if (!is.null(Data_Input$data_PlotDF)) {
+      # Proceed with data transformation since data is available
+      data <- Data_Input$data_PlotDF
+      reduced_data <- data %>%
+        mutate(log_pval = -log10(as.numeric(data[[input$pvalue_col]])))
+      return(reduced_data)
+    } else {
+      # Return NULL or an empty data frame if data_PlotDF is NULL
+      return(NULL)
+    }
   })
+  # data_w_log_pval <- reactive({
+  #   data <- Data_Input$data_PlotDF
+  #   # make new cols and select
+  #   reduced_data <- data %>%
+  #     mutate(log_pval = -log10(data[[input$pvalue_col]]))
+  # })
   
   # Collect nearpoint info and reduce to only Drug_comb, log2oddsRatio and pvalue_col
+  # point_info <- reactive({
+  #   if (is.null(data_w_log_pval())) {
+  #     return(NULL) # Early exit if data_w_log_pval is NULL
+  #   } else {
+  #     nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = log2oddsRatio, yvar = .data$log_pval, maxpoints = 1)
+  #     nearpoint_out %>%
+  #       dplyr::select("Drug_comb", "log2oddsRatio", input$pvalue_col)
+  #   }
+  #  
+  # })
+  # point_info <- reactive({
+  #   nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = log2oddsRatio, yvar = .data$log_pval, maxpoints = 1)
+  #   nearpoint_out %>%
+  #     dplyr::select("Drug_comb", "log2oddsRatio", input$pvalue_col)
+  # })
   point_info <- reactive({
-    nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = log2oddsRatio, yvar = .data$log_pval, maxpoints = 1)
-    nearpoint_out %>%
-      select("Drug_comb", "log2oddsRatio", input$pvalue_col)
+    # Ensure data_w_log_pval() is not NULL before proceeding
+    if (!is.null(data_w_log_pval())) {
+      nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = "log2oddsRatio", yvar = "log_pval", maxpoints = 1)
+      # Make sure to use correct column name without .data pronoun and directly select columns
+      nearpoint_out %>%
+        dplyr::select("Drug_comb", "log2oddsRatio", input$pvalue_col)
+    } else {
+      # Return NULL or an informative placeholder if the data is not available
+      return(data.frame(Drug_comb = NA, log2oddsRatio = NA, Pvalue = NA))
+    }
   })
-  
+  # render printed text
+  # output$click_info <- renderPrint({
+  #   if(!is.null(point_info()))
+  #     point_info()
+  # })
+  # Adjusted renderPrint for click_info
+  output$click_info <- renderPrint({
+    # Fetch the information from point_info() reactive expression
+    info <- point_info()
+    
+    # Check if info has any rows to print
+    if (!is.null(info) && nrow(info) > 0) {
+      print(info)
+    } else {
+      # Optionally, print a message indicating that no data is available
+      # This is more user-friendly than showing a blank or an error
+      print("Hover over the plot to see candidate drug combination details.")
+    }
+  })
+
   
   # DOWNLOAD HANDLER ----- VOLCANO
   

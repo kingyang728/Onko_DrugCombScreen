@@ -683,30 +683,6 @@ server <- function(input, output,session) {
   # when a point is clicked on the volcano plot
   # add drug to clicked drug list
   # if the point has been clicked twice, remove from list
-  # observeEvent(input$volcano_click, {
-  #   # create variable of what has been clicked + selected
-  #   if (is.null(input$selected_drugs)) {
-  #     drug_list$clicked_drugs_list <- NULL
-  #   }
-  #   # if drug_list is empty
-  #   # get point info and save drug
-  #   if (is.null(drug_list$clicked_drugs_list)) {
-  #     drug_list$clicked_drugs_list <- clicked_drug()
-  #     # if drug_list is not NULL
-  #     # check to see if drug is in drugs_list
-  #   } else {
-  #     drug_present <- clicked_drug() %in% input$selected_drugs
-  #     # if TRUE (drug is present already)
-  #     # remove drug from drug list
-  #     if (drug_present) {
-  #       present_idx <- !grepl(clicked_drug(), input$selected_drugs)
-  #       # remove row
-  #       drug_list$clicked_drugs_list <- input$selected_drugs[present_idx]
-  #     } else {
-  #       drug_list$clicked_drugs_list <- c(clicked_drug(), input$selected_drugs)
-  #     }
-  #   }
-  # })
   observeEvent(input$volcano_click, {
     # Check if data for the plot is available
     if (!is.null(Data_Input$data_PlotDF)) {
@@ -764,17 +740,6 @@ server <- function(input, output,session) {
   # when there is a double click on the plot
   # if brush is null, nothing happens,
   # if brush is not null, assign values to ranges
-  # observeEvent(input$volcano_dbl_click, {
-  #   brush <- input$volcano_brush
-  #   if (!is.null(brush)) {
-  #     ranges$x <- c(brush$xmin, brush$xmax)
-  #     ranges$y <- c(brush$ymin, brush$ymax)
-  # 
-  #   } else {
-  #     ranges$x <- NULL
-  #     ranges$y <- NULL
-  #   }
-  # })
   observeEvent(input$volcano_dbl_click, {
     # Check if data for the plot is available
     if (!is.null(Data_Input$data_PlotDF)) {
@@ -830,29 +795,8 @@ server <- function(input, output,session) {
       return(NULL)
     }
   })
-  # data_w_log_pval <- reactive({
-  #   data <- Data_Input$data_PlotDF
-  #   # make new cols and select
-  #   reduced_data <- data %>%
-  #     mutate(log_pval = -log10(data[[input$pvalue_col]]))
-  # })
   
   # Collect nearpoint info and reduce to only Drug_comb, log2oddsRatio and pvalue_col
-  # point_info <- reactive({
-  #   if (is.null(data_w_log_pval())) {
-  #     return(NULL) # Early exit if data_w_log_pval is NULL
-  #   } else {
-  #     nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = log2oddsRatio, yvar = .data$log_pval, maxpoints = 1)
-  #     nearpoint_out %>%
-  #       dplyr::select("Drug_comb", "log2oddsRatio", input$pvalue_col)
-  #   }
-  #  
-  # })
-  # point_info <- reactive({
-  #   nearpoint_out <- nearPoints(data_w_log_pval(), input$volcano_hover, xvar = log2oddsRatio, yvar = .data$log_pval, maxpoints = 1)
-  #   nearpoint_out %>%
-  #     dplyr::select("Drug_comb", "log2oddsRatio", input$pvalue_col)
-  # })
   point_info <- reactive({
     # Ensure data_w_log_pval() is not NULL before proceeding
     if (!is.null(data_w_log_pval())) {
@@ -866,11 +810,6 @@ server <- function(input, output,session) {
     }
   })
   # render printed text
-  # output$click_info <- renderPrint({
-  #   if(!is.null(point_info()))
-  #     point_info()
-  # })
-  # Adjusted renderPrint for click_info
   output$click_info <- renderPrint({
     # Fetch the information from point_info() reactive expression
     info <- point_info()

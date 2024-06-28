@@ -1,16 +1,17 @@
 # About Onko_DrugCombScreen
 
 ## Purpose
-Onko_DrugCombScreen is a powerful tool designed to assist researchers in identifying potential drug combination treatments for targeted cancers compared to control cohorts. It integrates various data analysis and visualization tools to analyze the potential efficacy and synergy of drug combinations.
+Onko_DrugCombScreen is a powerful tool designed to assist researchers in identifying potential drug combination treatments for targeted cancers compared to comparison cohorts. It integrates various data analysis and visualization tools to analyze the potential efficacy and synergy of drug combinations.
 
 ## Features
-- **Data Input**: Users can upload custom target and control variants data, as well as cell line data in CSV format, for drug recommendation analysis.
+- **Data Input**: Users can upload custom target and comparison cohorts' variants data, as well as cell line data in CSV format, for drug recommendation analysis.
 - **Analysis Tools**: The app offers several analysis tools, including volcano plots, heatmaps, circle plots, and alluvial diagrams, to visualize drug combination recommendations.
 - **Interactive Visualizations**: Users can interact with the plots to explore the data more deeply, such as hovering over points for more details or selecting specific drugs to highlight.
 - **Data Export**: Results from the analyses can be downloaded for further investigation or reporting.
+- **Test Data Analysis**: Click the `Test_Data` button to run a sample analysis with test data.
 
 ## How to Use
-1. **Upload Data**: Begin by uploading your target and control data files using the file input option on the left panel, along with any relevant cell line data.
+1. **Upload Data**: Begin by uploading your target and comparison data files using the file input option on the left panel, along with any relevant cell line data.
 2. **Select Analysis Parameters**:  Choose your target cancer disease, set the percentage threshold, and select other parameters such as test type (one-sided or two-sided) and response type (positive, negative, etc.) as needed.
 3. **Run Analysis**: Click "Submit" button to process the data. Explore the generated plots and tables to examine potential drug combinations.
 4. **Download Results**: Use the download buttons to save your results for downstream analysis or publication.
@@ -23,7 +24,7 @@ Onko_DrugCombScreen is a powerful tool designed to assist researchers in identif
 - **UpsetPlot**: Illustrates proportions and intersections of recommended drugs, providing insights into overlap and distinct recommendations.
 - **BarPlot**: Depicts the percentage of patient counts for a single recommended drug in the target cancer group.
 - **Primary_Table**: Offers a drug recommendation table for the target cancer group.
-- **Control_Table**: Provides a drug recommendation table for the control group.
+- **Comparison_Table**: Provides a drug recommendation table for the comparison group.
 - **Cellline_Table**: Shows a drug recommendation table for the cell line group.
 - **DrugComb_Analysis_Table**: Features an analysis of candidate drug combinations, incorporating Fisher's exact tests and cell line data.
 

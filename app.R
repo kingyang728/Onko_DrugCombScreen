@@ -35,17 +35,8 @@ sidebar <- dashboardSidebar(
       
     "))
   ),
-  # tags$head(
-  #   tags$style(HTML("
-  #     .shiny-file-input { 
-  #       margin-bottom: 0px; /* Reduce space between file inputs */
-  #     }
-  #     .shiny-file-input .control-label {
-  #       margin-bottom: 0px; /* Reduce space between label and file input */
-  #     }
-  #   "))
-  # ),
-  fileInput("target_primary_data", "Target primary data (CSV/MAF):",
+
+  fileInput("target_primary_data", "Target cancer data (CSV/MAF):",
             multiple = FALSE,
             accept = c(
               "text/csv",
@@ -55,7 +46,7 @@ sidebar <- dashboardSidebar(
               ".maf.gz",
               ".vcf"
             )),
-  fileInput("control_primary_data", "Control primary data (CSV/MAF):",
+  fileInput("comparison_primary_data", "Comparison cancer data (CSV/MAF):",
             multiple = FALSE,
             accept = c(
               "text/csv",
@@ -108,7 +99,14 @@ sidebar <- dashboardSidebar(
            numericInput("img_h", "height:", 1080, min = 100, max = 4096)
     )
   ),
-  actionButton("submit", "Submit", icon = icon("arrow-circle-right")),
+  fluidRow(
+    column(width = 6,
+           actionButton("test_data", "Test_Data", icon = icon("arrow-circle-up"))
+    ),
+    column(width = 6,
+           actionButton("submit", "Submit", icon = icon("arrow-circle-right"))
+    )
+  ),
 
   
   sidebarMenu(
@@ -182,22 +180,22 @@ sidebar <- dashboardSidebar(
     ),tabName = "barplot"),
     
   
-    convertMenuItem(menuItem("Primary_Table",tabName = "Primary_Table",uiOutput("Primary_Response_selector")
-                             # selectInput("Primary_Response_selector",
+    convertMenuItem(menuItem("Target_Table",tabName = "Target_Table",uiOutput("Target_Response_selector")
+                             # selectInput("Target_Response_selector",
                              #             "Select the predict response type",
                              #             choices = c("Positive","Negative","All"),
                              #             selected = "All",
                              #             multiple = FALSE
                              # )
-    ),tabName = "Primary_Table"),
-    convertMenuItem(menuItem("Control_Table",tabName = "Control_Table",uiOutput("Control_Response_selector")
-                             # selectInput("Control_Response_selector",
+    ),tabName = "Target_Table"),
+    convertMenuItem(menuItem("Comparison_Table",tabName = "Comparison_Table",uiOutput("Comparison_Response_selector")
+                             # selectInput("Comparison_Response_selector",
                              #             "Select the predict response type",
                              #             choices = c("Positive","Negative","All"),
                              #             selected = "All",
                              #             multiple = FALSE
                              # )
-    ),tabName = "Control_Table"),
+    ),tabName = "Comparison_Table"),
     convertMenuItem(menuItem("Cellline_Table",tabName = "Cellline_Table",uiOutput("Cellline_Response_selector")
                              # selectInput("Cellline_Response_selector",
                              #             "Select the predict response type",
@@ -303,16 +301,16 @@ body <- dashboardBody(
             br(),
             br(),
     ),
-    tabItem(tabName = "Primary_Table",
-            uiOutput("Primary_Table_Title"),
-            # h2("Primary Drug Table"),
-            dataTableOutput("Primary_Table"),
-            downloadButton("downloadPrimary", "Download Primary Data Table"),
+    tabItem(tabName = "Target_Table",
+            uiOutput("Target_Table_Title"),
+            # h2("Target Drug Table"),
+            dataTableOutput("Target_Table"),
+            downloadButton("downloadTarget", "Download Target Data Table"),
     ),
-    tabItem(tabName = "Control_Table",
-            uiOutput("Control_Table_Title"),
-            dataTableOutput("Control_Table"),
-            downloadButton("downloadControl", "Download Control Data Table"),
+    tabItem(tabName = "Comparison_Table",
+            uiOutput("Comparison_Table_Title"),
+            dataTableOutput("Comparison_Table"),
+            downloadButton("downloadComparison", "Download Comparison Data Table"),
     ),
     tabItem(tabName = "Cellline_Table",
             uiOutput("Cellline_Table_Title"),
@@ -369,10 +367,10 @@ server <- function(input, output,session) {
   # Define reactiveValues to store data for each input
   Data_Input <- reactiveValues(    ### reactiveValues() but not the reactive()
     target_primary_data = NULL,
-    control_primary_data = NULL,
+    comparison_primary_data = NULL,
     cellline_data = NULL,
-    Primary_Table = NULL,
-    Control_Table = NULL,
+    Target_Table = NULL,
+    Comparison_Table = NULL,
     Cellline_Table = NULL,
     DrugComb_Analysis_Table = NULL,
     data_PlotDF = NULL,
@@ -392,17 +390,17 @@ server <- function(input, output,session) {
   Response_type_selection <- reactive({
     input$Response_type_selector
   })
-  #### Get target_primary_data,control_primary_data,cellline_data and their names ------------
+  #### Get target_primary_data,comparison_primary_data,cellline_data and their names ------------
   # Observe changes in target_primary_data
   observeEvent(input$target_primary_data, {
     Data_Input$target_primary_data <- read_data(input$target_primary_data)
-    Data_Input$Primary_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
+    Data_Input$Target_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
   })
   
-  # Observe changes in control_primary_data
-  observeEvent(input$control_primary_data, {
-    Data_Input$control_primary_data <- read_data(input$control_primary_data)
-    Data_Input$Control_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$control_primary_data)
+  # Observe changes in comparison_primary_data
+  observeEvent(input$comparison_primary_data, {
+    Data_Input$comparison_primary_data <- read_data(input$comparison_primary_data)
+    Data_Input$Comparison_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$comparison_primary_data)
   })
   
   # Observe changes in cellline_data
@@ -411,36 +409,41 @@ server <- function(input, output,session) {
     Data_Input$Cellline_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$cellline_data)
   })
   
+  # Define a reactive value to hold the filename
+  target_filename <- reactiveVal(NULL)
+  comparison_filename <- reactiveVal(NULL)
+  cellline_filename <- reactiveVal(NULL)
 
-  
-  target_filename <- reactive({
-    req(input$target_primary_data) # ensure the file is uploaded
+  # Observe and update target_filename based on file input
+  observeEvent(input$target_primary_data, {
+    req(input$target_primary_data)  # Ensure the file is uploaded
     string <- tools::file_path_sans_ext(basename(input$target_primary_data$name))
     match <- regexpr("[[:alpha:]]+[[:digit:]]*", string)
-    regmatches(string, match)
+    target_filename(regmatches(string, match))
   })
   
-  control_filename <- reactive({
-    req(input$control_primary_data)
-    string <- tools::file_path_sans_ext(basename(input$control_primary_data$name))
+  # Observe and update comparison_filename based on file input
+  observeEvent(input$comparison_primary_data, {
+    req(input$comparison_primary_data)
+    string <- tools::file_path_sans_ext(basename(input$comparison_primary_data$name))
     match <- regexpr("[[:alpha:]]+[[:digit:]]*", string)
-    regmatches(string, match)
-    
+    comparison_filename(regmatches(string, match))
   })
   
-  cellline_filename <- reactive({
+  # Observe and update cellline_filename based on file input
+  observeEvent(input$cellline_data, {
     req(input$cellline_data)
     string <- tools::file_path_sans_ext(basename(input$cellline_data$name))
     match <- regexpr("[[:alpha:]]+[[:digit:]]*", string)
-    regmatches(string, match)
+    cellline_filename(regmatches(string, match))
   })
   
   ####---------------------
   # observeEvent(input$Response_type_selector, {
-  #   if(!is.null(Data_Input$Primary_Table) & !is.null(Data_Input$Control_Table) & !is.null(Data_Input$Control_Table)){
+  #   if(!is.null(Data_Input$Target_Table) & !is.null(Data_Input$Comparison_Table) & !is.null(Data_Input$Comparison_Table)){
   #     PredictType <- input$Response_type_selector
-  #     Data_Input$Primary_Table <- Get_DrugPredictsType_DF(Data_Input$Primary_Table, PredictType)
-  #     Data_Input$Control_Table <- Get_DrugPredictsType_DF(Data_Input$Control_Table, PredictType)
+  #     Data_Input$Target_Table <- Get_DrugPredictsType_DF(Data_Input$Target_Table, PredictType)
+  #     Data_Input$Comparison_Table <- Get_DrugPredictsType_DF(Data_Input$Comparison_Table, PredictType)
   #     Data_Input$Cellline_Table <- Get_DrugPredictsType_DF(Data_Input$Cellline_Table, PredictType)}
   # })
   # Observe changes in the cancer_selector dropdown
@@ -448,15 +451,15 @@ server <- function(input, output,session) {
     
     # Update tables (or perform other operations) when cancer_selector value changes
     if (!is.null(Data_Input$target_primary_data)) {
-      Data_Input$Primary_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
-      if(!is.null(Data_Input$Primary_Table))
-        Data_Input$Primary_Table <- Get_DrugPredictsType_DF(Data_Input$Primary_Table, Response_type_selection())
+      Data_Input$Target_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
+      if(!is.null(Data_Input$Target_Table))
+        Data_Input$Target_Table <- Get_DrugPredictsType_DF(Data_Input$Target_Table, Response_type_selection())
     }
     
-    if (!is.null(Data_Input$control_primary_data)) {
-      Data_Input$Control_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$control_primary_data)
-      if(!is.null(Data_Input$Control_Table))
-        Data_Input$Control_Table <- Get_DrugPredictsType_DF(Data_Input$Control_Table, Response_type_selection())
+    if (!is.null(Data_Input$comparison_primary_data)) {
+      Data_Input$Comparison_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$comparison_primary_data)
+      if(!is.null(Data_Input$Comparison_Table))
+        Data_Input$Comparison_Table <- Get_DrugPredictsType_DF(Data_Input$Comparison_Table, Response_type_selection())
     }
     
     if (!is.null(Data_Input$cellline_data)) {
@@ -467,16 +470,16 @@ server <- function(input, output,session) {
   })
   
   
-  output$Primary_Response_selector <- renderUI({
-    selectInput("Primary_Response_selector",
+  output$Target_Response_selector <- renderUI({
+    selectInput("Target_Response_selector",
                 "Select the predict response type",
                 choices = c("Positive","Negative","All"),
                 selected = Response_type_selection(),
                 multiple = FALSE
     )
   })
-  output$Control_Response_selector <- renderUI({
-    selectInput("Control_Response_selector",
+  output$Comparison_Response_selector <- renderUI({
+    selectInput("Comparison_Response_selector",
                 "Select the predict response type",
                 choices = c("Positive","Negative","All"),
                 selected = Response_type_selection(),
@@ -492,13 +495,13 @@ server <- function(input, output,session) {
     )
   })
   
-  observeEvent(input$Primary_Response_selector, {if (!is.null(Data_Input$target_primary_data)) {
-    Data_Input$Primary_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
-    Data_Input$Primary_Table <- Get_DrugPredictsType_DF(Data_Input$Primary_Table, input$Primary_Response_selector)}
+  observeEvent(input$Target_Response_selector, {if (!is.null(Data_Input$target_primary_data)) {
+    Data_Input$Target_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
+    Data_Input$Target_Table <- Get_DrugPredictsType_DF(Data_Input$Target_Table, input$Target_Response_selector)}
   })
-  observeEvent(input$Control_Response_selector, {if (!is.null(Data_Input$control_primary_data)) {
-    Data_Input$Control_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$control_primary_data)
-    Data_Input$Control_Table <- Get_DrugPredictsType_DF(Data_Input$Control_Table, input$Control_Response_selector)
+  observeEvent(input$Comparison_Response_selector, {if (!is.null(Data_Input$comparison_primary_data)) {
+    Data_Input$Comparison_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$comparison_primary_data)
+    Data_Input$Comparison_Table <- Get_DrugPredictsType_DF(Data_Input$Comparison_Table, input$Comparison_Response_selector)
   }
     
   })
@@ -508,41 +511,41 @@ server <- function(input, output,session) {
   })
   
   # Render the table for target_primary_data
-  output$Primary_Table <- renderDataTable({
-    if (is.null(Data_Input$Primary_Table)) return(NULL)
-    Data_Input$Primary_Table
+  output$Target_Table <- renderDataTable({
+    if (is.null(Data_Input$Target_Table)) return(NULL)
+    Data_Input$Target_Table
     # Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
   },options = list(scrollX = TRUE))
-  output$Primary_Table_Title <- renderUI({
-    h2(paste("Primary Data -", target_filename()), "Table")
+  output$Target_Table_Title <- renderUI({
+    h2(paste("Target Data -", target_filename()), "Table")
   })
-  output$downloadPrimary <- downloadHandler(
+  output$downloadTarget <- downloadHandler(
     filename = function() {
       paste0("primary_data-",target_filename(),"_",Sys.Date(), ".csv", sep="")
     },
     content = function(file) {
       # data <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$target_primary_data)
-      write.csv(Data_Input$Primary_Table, file, row.names = FALSE,na="")
+      write.csv(Data_Input$Target_Table, file, row.names = FALSE,na="")
     }
   )
 
   
-  output$Control_Table <- renderDataTable({
-    if (is.null(Data_Input$Control_Table)) return(NULL)
-    Data_Input$Control_Table
-    # Additional processing for control_primary_data using selected_PatCancerType()
-    # Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$control_primary_data)
+  output$Comparison_Table <- renderDataTable({
+    if (is.null(Data_Input$Comparison_Table)) return(NULL)
+    Data_Input$Comparison_Table
+    # Additional processing for comparison_primary_data using selected_PatCancerType()
+    # Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), Data_Input$comparison_primary_data)
     
   },options = list(scrollX = TRUE))
-  output$Control_Table_Title <- renderUI({
-    h2(paste("Control Data -", control_filename()), "Table")
+  output$Comparison_Table_Title <- renderUI({
+    h2(paste("Comparison Data -", comparison_filename()), "Table")
   })
-  output$downloadControl <- downloadHandler(
+  output$downloadComparison <- downloadHandler(
     filename = function() {
-      paste0("control_data-",control_filename(),"_",Sys.Date(), ".csv", sep="")
+      paste0("comparison_data-",comparison_filename(),"_",Sys.Date(), ".csv", sep="")
     },
     content = function(file) {
-      write.csv(Data_Input$Control_Table, file, row.names = FALSE,na="")
+      write.csv(Data_Input$Comparison_Table, file, row.names = FALSE,na="")
     }
   )
   
@@ -571,16 +574,16 @@ server <- function(input, output,session) {
       incProgress(0.1)  # Shows initial progress
       
       # Check if any of the tables are NULL
-      if (is.null(Data_Input$Primary_Table) || is.null(Data_Input$Control_Table)) {
+      if (is.null(Data_Input$Target_Table) || is.null(Data_Input$Comparison_Table)) {
         Data_Input$DrugComb_Analysis_Table <- NULL  # Ensures the table output is cleared
         incProgress(0.9, detail = "Clearing results...")  # Completes the progress
       } else if(is.null(Data_Input$Cellline_Table)) {
-        Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Primary_Table, Data_Input$Control_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
+        Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Target_Table, Data_Input$Comparison_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
         incProgress(0.5, detail = "Processing without cell line data...")  # Adjusts the progress to complete
         Data_Input$CirclePlot_DFList <- CirclePlot_DF_Create(Data_Input$DrugComb_Analysis_Table)
         incProgress(0.9, detail = "Processing CirclePlot_DFlist ...")  # Adjusts the progress to complete
       } else {
-        Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Primary_Table, Data_Input$Control_Table, Data_Input$Cellline_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
+        Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Target_Table, Data_Input$Comparison_Table, Data_Input$Cellline_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
         incProgress(0.4, detail = "Processing with cell line data...")  # Adjusts the progress to complete
         Data_Input$data_PlotDF <- PlotDF_Create(Data_Input$DrugComb_Analysis_Table)
         incProgress(0.7, detail = "Processing PlotDF ...")  # Adjusts the progress to complete
@@ -588,6 +591,39 @@ server <- function(input, output,session) {
         incProgress(0.9, detail = "Processing CirclePlot_DFList...")  # Adjusts the progress to complete
       }
     })
+  })
+
+  observeEvent(input$test_data, {
+   
+    Data_Input$target_primary_data <- test_Target_data
+    Data_Input$comparison_primary_data <- test_Comparison_data
+    Data_Input$cellline_data <- test_Cellline_data
+    
+    Data_Input$Target_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), test_Target_data)
+    Data_Input$Comparison_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), test_Comparison_data)
+    Data_Input$Cellline_Table <- Get_MTBreporter_DF(DrugClassified_DB, selected_PatCancerType(), test_Cellline_data)
+    # print(Data_Input$Target_Table)
+
+    
+    withProgress(message = 'Processing... Please wait', value = 0, {
+      # Optionally, set an initial progress amount
+    incProgress(0.1)  # Shows initial progress
+
+    Data_Input$DrugComb_Analysis_Table <- DrugComb_analysis(Data_Input$Target_Table, Data_Input$Comparison_Table, Data_Input$Cellline_Table, Freq_cutoff = Percentage_Cutoff(), testType = Testtype())
+    incProgress(0.4, detail = "Processing with cell line data...")  # Adjusts the progress to complete
+    Data_Input$data_PlotDF <- PlotDF_Create(Data_Input$DrugComb_Analysis_Table)
+    incProgress(0.7, detail = "Processing PlotDF ...")  # Adjusts the progress to complete
+    Data_Input$CirclePlot_DFList <- CirclePlot_DF_Create(Data_Input$DrugComb_Analysis_Table)
+    incProgress(0.9, detail = "Processing CirclePlot_DFList...")  # Adjusts the progress to complete
+
+      
+    })
+
+    target_filename("test_Target")
+    comparison_filename("test_Comparison")
+    cellline_filename("test_Cellline")
+    
+
   })
   
   
@@ -769,7 +805,7 @@ server <- function(input, output,session) {
                 y_label = input$y_axis_lab,
                 xlim = ranges$x,
                 ylim = ranges$y,
-                specific_category = paste0(target_filename(),"_vs_",control_filename())
+                specific_category = paste0(target_filename(),"_vs_",comparison_filename())
                 
     )
   })
@@ -829,7 +865,7 @@ server <- function(input, output,session) {
   
   output$download_volcano <- downloadHandler(
     filename = function() {
-      paste0(target_filename(),"_vs_",control_filename(),"_volcano_plot_", Sys.Date(), ".pdf")
+      paste0(target_filename(),"_vs_",comparison_filename(),"_volcano_plot_", Sys.Date(), ".pdf")
     },
     
     content = function(file) {
@@ -907,7 +943,7 @@ server <- function(input, output,session) {
     
     selectInput("selected_alluvialdrug",
                 "Select a drug for alluvial diagram",
-                sort(Data_Input$Primary_Table[["Classified_Drug_Name"]]),
+                sort(Data_Input$Target_Table[["Classified_Drug_Name"]]),
                 # options = list(`server` = TRUE),
                 multiple = FALSE,
                 #selected = "PARP Inhibitor",
@@ -915,7 +951,7 @@ server <- function(input, output,session) {
     )
   })
     reactive_alluvial <- reactive({
-      plotAlluvial(drugDF = Data_Input$Primary_Table,
+      plotAlluvial(drugDF = Data_Input$Target_Table,
                    classified_drugName = input$selected_alluvialdrug,
                    Alluvial_title = paste(input$selected_alluvialdrug,"in",input$subtype_drug,target_filename())
                    # Alluvial_title = target_filename()
@@ -923,7 +959,7 @@ server <- function(input, output,session) {
     })
     
     output$alluvial_plot <- renderPlot({
-      if (is.null(Data_Input$Primary_Table)) return(NULL)
+      if (is.null(Data_Input$Target_Table)) return(NULL)
       reactive_alluvial()
     })
     
@@ -942,14 +978,14 @@ server <- function(input, output,session) {
   ### Upset Plot in reactive function ----------------
   reactive_upset <- reactive({
     
-    plotUpset(drugDF = Data_Input$Primary_Table,
+    plotUpset(drugDF = Data_Input$Target_Table,
               title_name = target_filename()
     )
   })
   
   # output bar plot
   output$upset_plot <- renderPlot({
-    if (is.null(Data_Input$Primary_Table)) return(NULL)
+    if (is.null(Data_Input$Target_Table)) return(NULL)
     reactive_upset()
   })
   
@@ -968,14 +1004,14 @@ server <- function(input, output,session) {
   ### Bar plot in reactive function ---------------- 
   reactive_bar <- reactive({
     
-    plotfrequencyBarplot(drugDF = Data_Input$Primary_Table,
+    plotfrequencyBarplot(drugDF = Data_Input$Target_Table,
                          Barplot_title = target_filename()
     )
   })
   
   # output circle plot
   output$bar_plot <- renderPlot({
-    if (is.null(Data_Input$Primary_Table)) return(NULL)
+    if (is.null(Data_Input$Target_Table)) return(NULL)
     reactive_bar()
   })
   
@@ -994,5 +1030,3 @@ server <- function(input, output,session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
-

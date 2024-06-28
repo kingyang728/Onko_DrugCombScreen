@@ -73,8 +73,8 @@ FisherTestDF_generate <- function(target_DrugFreqDF,control_DrugFreqDF,Freq_cuto
   
   FisherTestDF$adjust_p.value <- p.adjust(FisherTestDF$p.value ,method="BH")
   
-  FisherTestDF$p.value <- round(FisherTestDF$p.value,digits=8)
-  FisherTestDF$adjust_p.value <- round(FisherTestDF$adjust_p.value,digits=8)
+  FisherTestDF$p.value <- round(FisherTestDF$p.value,digits=16)
+  FisherTestDF$adjust_p.value <- round(FisherTestDF$adjust_p.value,digits=16)
   
   # FisherTestDF <- merge_maxEvidenceLevel_toFisherDF(FisherTestDF,drugDF)
   FisherTestDF<-FisherTestDF[order(FisherTestDF$adjust_p.value),]

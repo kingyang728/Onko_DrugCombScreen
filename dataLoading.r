@@ -5,9 +5,15 @@ suppressPackageStartupMessages(library(GenomicFeatures, quietly=TRUE, warn.confl
 # suppressPackageStartupMessages(library(BSgenome.Hsapiens.UCSC.hg38, quietly=TRUE, warn.conflicts = FALSE))
 # Combined_DrugDB_path <- "Data/Combined_DrugDB.csv"
 Comb_DrugClassified_DB_path <- "Data/Combined_DrugClassifiedDB.csv"
+test_primary_file <- "test_data/Primary_Her2_mutationSNVCNV_DF.csv"
+test_comparison_file <- "test_data/Comparison_Normallike_BRCA_mutation_DF.csv"
+test_cellline_file <- "test_data/Cellline_CCLEBRCA_Mutation_DF.csv"
 
 # Combined_DrugDB <- read.csv(Combined_DrugDB_path,row.names = NULL,header = TRUE,check.names = FALSE)
 DrugClassified_DB <- read.csv(Comb_DrugClassified_DB_path,row.names = NULL,header = TRUE,check.names = FALSE)
+test_Target_data <- read.csv(test_primary_file, header = TRUE, sep = ",")
+test_Comparison_data <- read.csv(test_comparison_file, header = TRUE, sep = ",")
+test_Cellline_data <- read.csv(test_cellline_file, header = TRUE, sep = ",")
 
 # DLBCLc1Significant_DurgCombID_Path <- "Data/DLBCLc1_SignificantDrugCombsIDDF.csv"
 # DLBCLc2Significant_DurgCombID_Path <- "Data/DLBCLc2_SignificantDrugCombsIDDF.csv"
